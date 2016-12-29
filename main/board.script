@@ -42,6 +42,9 @@ local function setup_board(self, rows, columns)
     end
   end
 
+  local scale = math.min(math.min(1, 9 / columns), math.min(1, 8 / rows))
+  go.set_scale(vmath.vector3(scale), self.go_id)
+
   local half_width = tile_size * columns * 0.5
   local half_height = tile_size * rows * 0.5
 
@@ -105,6 +108,7 @@ local function set_game_state(self, state)
 
     local piece_actor = factory.create(fact, position)
     msg.post(piece_actor, h_set_parent, { parent_id = self.go_id, keep_world_transform = 0 })
+    go.set_scale(vmath.vector3(1), piece_actor)
     piece_count = piece_count + 1
     self.pieces[piece_count] = piece_actor
   end

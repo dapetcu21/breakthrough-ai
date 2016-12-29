@@ -19,3 +19,6 @@ scale = 0.02
 [script]
 shared_state = 1
 
+[sprite]
+max_count = 2048
+
