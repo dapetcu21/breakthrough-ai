@@ -9,8 +9,8 @@ local h_set_board_size = hash("set_board_size")
 
 function init(self)
   self.paused = true
-  self.white_agent = "random"
-  self.black_agent = "random"
+  self.white_agent = "human"
+  self.black_agent = "human"
   self.rows = 7
   self.columns = 7
   self.rows_string = tostring(self.rows)
@@ -26,15 +26,19 @@ function on_input(self, action_id, action)
   end)
 
   local white_agent = self.white_agent
-  self.white_agent = dirtylarry:radio("white_random", action_id, action, "random", self.white_agent)
   self.white_agent = dirtylarry:radio("white_human", action_id, action, "human", self.white_agent)
+  self.white_agent = dirtylarry:radio("white_random", action_id, action, "random", self.white_agent)
+  self.white_agent = dirtylarry:radio("white_minimax", action_id, action, "minimax", self.white_agent)
+  self.white_agent = dirtylarry:radio("white_montecarlo", action_id, action, "montecarlo", self.white_agent)
   if white_agent ~= self.white_agent then
     msg.post(self.controller, h_set_agent, { player = 1, agent = self.white_agent })
   end
 
   local black_agent = self.black_agent
-  self.black_agent = dirtylarry:radio("black_random", action_id, action, "random", self.black_agent)
   self.black_agent = dirtylarry:radio("black_human", action_id, action, "human", self.black_agent)
+  self.black_agent = dirtylarry:radio("black_random", action_id, action, "random", self.black_agent)
+  self.black_agent = dirtylarry:radio("black_minimax", action_id, action, "minimax", self.black_agent)
+  self.black_agent = dirtylarry:radio("black_montecarlo", action_id, action, "montecarlo", self.black_agent)
   if black_agent ~= self.black_agent then
     msg.post(self.controller, h_set_agent, { player = 2, agent = self.black_agent })
   end

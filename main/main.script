@@ -1,6 +1,8 @@
 local GameState = require "game.game_state"
 local StateTransfer = require "main.state_transfer"
 local random_agent = require "game.random_agent"
+local minimax_agent = require "game.minimax_agent"
+local montecarlo_agent = require "game.montecarlo_agent"
 
 local h_set_game_state = hash("set_game_state")
 local h_ready_for_move = hash("ready_for_move")
@@ -80,10 +82,12 @@ function init(self)
 
   self.board_animating = false
   self.paused = true
-  self.current_agents = { "random", "random" }
+  self.current_agents = { "human", "human" }
   self.human_move = nil
   self.agents = {
     random = random_agent,
+    minimax = minimax_agent,
+    montecarlo = montecarlo_agent,
     human = function (state)
       local move = self.human_move
       self.human_move = nil
