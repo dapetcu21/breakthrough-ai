@@ -1,0 +1,15 @@
+local h_capture = hash("capture")
+local h_tintw = hash("tint.w")
+local h_scale = hash("scale")
+local h_positionz = hash("position.z")
+
+function on_message(self, message_id, message, sender)
+  if message_id == h_capture then
+    local go_url = msg.url(".")
+    go.set(go_url, h_positionz, 0.05)
+    go.animate(go_url, h_scale, go.PLAYBACK_ONCE_FORWARD, 0.0, go.EASING_LINEAR, 0.4, 0.0)
+    go.animate(msg.url("#sprite"), h_tintw, go.PLAYBACK_ONCE_FORWARD, 0.0, go.EASING_LINEAR, 0.4, 0.0, function ()
+      go.delete(go_url)
+    end)
+  end
+end

@@ -1,0 +1,124 @@
+local StateTransfer = require "main.state_transfer"
+
+local tile_size = 80
+
+local h_layer1 = hash("layer1")
+local h_set_game_state = hash("set_game_state")
+local h_ready_for_move = hash("ready_for_move")
+local h_apply_move = hash("apply_move")
+local h_set_parent = hash("set_parent")
+local h_position = hash("position")
+local h_capture = hash("capture")
+
+local function setup_board(self, rows, columns)
+  if self.rows == rows and self.column == columns then
+    return
+  end
+
+  for y = 1, self.rows do
+    for x = 1, self.columns do
+      tilemap.set_tile(self.tilemap, h_layer1, x, y, 0)
+    end
+  end
+
+  self.rows = rows
+  self.columns = columns
+
+  for y = 1, rows do
+    for x = 1, columns do
+      local tile_x = math.floor((x - 1) * (4 / columns)) * 2 + (1 - x % 2)
+      local tile_y = math.floor((y - 1) * (4 / rows)) * 2 + (1 - y % 2)
+      local tile_id = (7 - tile_y) * 8 + tile_x + 1
+      tilemap.set_tile(self.tilemap, h_layer1, x, y, tile_id)
+    end
+  end
+
+  local half_width = tile_size * columns * 0.5
+  local half_height = tile_size * rows * 0.5
+
+  go.set_position(vmath.vector3(-half_width, -half_height, 0), self.tilemap)
+
+  go.set_position(vmath.vector3(0, half_height + 11, 0), self.border_top)
+  go.set_position(vmath.vector3(0, -half_height - 9, 0), self.border_bottom)
+  go.set_position(vmath.vector3(half_width + 10, 0, 0), self.border_right)
+  go.set_position(vmath.vector3(-half_width - 10, 0, 0), self.border_left)
+
+  go.set_scale(vmath.vector3(columns / 8, 1, 1), self.border_top)
+  go.set_scale(vmath.vector3(columns / 8, 1, 1), self.border_bottom)
+  go.set_scale(vmath.vector3(1, rows / 8, 1), self.border_right)
+  go.set_scale(vmath.vector3(1, rows / 8, 1), self.border_left)
+
+  go.set_position(vmath.vector3(half_width + 10, -half_height - 9, 0), self.corner_right_bottom)
+  go.set_position(vmath.vector3(half_width + 10, half_height + 11, 0), self.corner_right_top)
+  go.set_position(vmath.vector3(-half_width - 10, -half_height - 9, 0), self.corner_left_bottom)
+  go.set_position(vmath.vector3(-half_width - 10, half_height + 11, 0), self.corner_left_top)
+end
+
+function init(self)
+  self.go_id = go.get_id("go")
+  self.tilemap = msg.url("tilemap#tilemap")
+  self.border_top = msg.url("border_top#sprite")
+  self.border_bottom = msg.url("border_bottom#sprite")
+  self.border_left = msg.url("border_left#sprite")
+  self.border_right = msg.url("border_right#sprite")
+  self.corner_left_top = msg.url("corner_left_top#sprite")
+  self.corner_left_bottom = msg.url("corner_left_bottom#sprite")
+  self.corner_right_top = msg.url("corner_right_top#sprite")
+  self.corner_right_bottom = msg.url("corner_right_bottom#sprite")
+  self.white_factory = msg.url("piece_factory#white")
+  self.black_factory = msg.url("piece_factory#black")
+  self.rows = 20
+  self.columns = 20
+  self.pieces = {}
+  setup_board(self, 7, 7)
+end
+
+local function get_piece_position(row, column, rows, columns)
+  return vmath.vector3(
+    (column - 0.5 - columns * 0.5) * tile_size,
+    (row - 0.5 - rows * 0.5) * tile_size,
+    0.1
+  )
+end
+
+local function set_game_state(self, state)
+  setup_board(self, state.rows, state.columns)
+
+  go.delete_all(self.pieces)
+  self.pieces = {}
+  local piece_count = 0
+
+  for i, piece in ipairs(state.pieces) do
+    local fact = piece.owner == 1 and self.white_factory or self.black_factory
+    local position = get_piece_position(piece.row, piece.column, state.rows, state.columns)
+
+    local piece_actor = factory.create(fact, position)
+    msg.post(piece_actor, h_set_parent, { parent_id = self.go_id, keep_world_transform = 0 })
+    piece_count = piece_count + 1
+    self.pieces[piece_count] = piece_actor
+  end
+
+end
+
+local function apply_move(self, move, sender)
+  local piece = self.pieces[move.piece_id]
+
+  local position = get_piece_position(move.row, move.column, self.rows, self.columns)
+  go.animate(piece, h_position, go.PLAYBACK_ONCE_FORWARD, position, go.EASING_LINEAR, 0.4, 0.0, function ()
+    msg.post(sender, h_ready_for_move)
+  end)
+
+  if move.captured_piece_id then
+    local captured_piece = self.pieces[move.captured_piece_id]
+    table.remove(self.pieces, move.captured_piece_id)
+    msg.post(captured_piece, h_capture)
+  end
+end
+
+function on_message(self, message_id, message, sender)
+  if message_id == h_set_game_state then
+    set_game_state(self, StateTransfer.state)
+  elseif message_id == h_apply_move then
+    apply_move(self, message.move, sender)
+  end
+end

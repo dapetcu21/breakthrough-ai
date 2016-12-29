@@ -1,0 +1,70 @@
+local dirtylarry = require "dirtylarry/dirtylarry"
+
+local h_set_turn_label = hash("set_turn_label")
+local h_set_paused = hash("set_paused")
+local h_init_scene = hash("init_scene")
+local h_reset_game = hash("reset_game")
+local h_set_agent = hash("set_agent")
+local h_set_board_size = hash("set_board_size")
+
+function init(self)
+  self.paused = true
+  self.white_agent = "random"
+  self.black_agent = "random"
+  self.rows = 7
+  self.columns = 7
+  self.rows_string = tostring(self.rows)
+  self.columns_string = tostring(self.columns)
+
+  msg.post(".", "acquire_input_focus")
+end
+
+function on_input(self, action_id, action)
+  dirtylarry:button("play_button", action_id, action, function ()
+    msg.post(self.controller, h_set_paused, { value = not self.paused })
+  end)
+  dirtylarry:button("reset_button", action_id, action, function ()
+    msg.post(self.controller, h_reset_game)
+  end)
+
+  local white_agent = self.white_agent
+  self.white_agent = dirtylarry:radio("white_random", action_id, action, "random", self.white_agent)
+  self.white_agent = dirtylarry:radio("white_human", action_id, action, "human", self.white_agent)
+  if white_agent ~= self.white_agent then
+    msg.post(self.controller, h_set_agent, { player = 1, agent = self.white_agent })
+  end
+
+  local black_agent = self.black_agent
+  self.black_agent = dirtylarry:radio("black_random", action_id, action, "random", self.black_agent)
+  self.black_agent = dirtylarry:radio("black_human", action_id, action, "human", self.black_agent)
+  if black_agent ~= self.black_agent then
+    msg.post(self.controller, h_set_agent, { player = 2, agent = self.black_agent })
+  end
+
+  self.rows_string = dirtylarry:input("rows", action_id, action, gui.KEYBOARD_TYPE_DEFAULT, self.rows_string)
+  self.columns_string = dirtylarry:input("columns", action_id, action, gui.KEYBOARD_TYPE_DEFAULT, self.columns_string)
+  local rows = tonumber(self.rows_string)
+  local columns = tonumber(self.columns_string)
+  if rows and columns then
+    rows = math.min(20, math.max(2, math.floor(rows)))
+    columns = math.min(20, math.max(2, math.floor(columns)))
+    if rows ~= self.rows or columns ~= self.columns then
+      self.rows = rows
+      self.columns = columns
+      msg.post(self.controller, h_set_board_size, { rows = rows, columns = columns })
+    end
+  end
+
+end
+
+function on_message(self, message_id, message, sender)
+  if message_id == h_set_turn_label then
+    gui.set_text(gui.get_node("turn_label"), message.label)
+  elseif message_id == h_set_paused then
+    self.paused = message.value
+    local label = self.paused and "Resume game" or "Pause game"
+    gui.set_text(gui.get_node("play_button/larrylabel"), label)
+  elseif message_id == h_init_scene then
+    self.controller = sender
+  end
+end

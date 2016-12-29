@@ -1,0 +1,33 @@
+images {
+  image: "/main/images/board/border_bottom.png"
+}
+images {
+  image: "/main/images/board/border_left.png"
+}
+images {
+  image: "/main/images/board/border_right.png"
+}
+images {
+  image: "/main/images/board/border_top.png"
+}
+images {
+  image: "/main/images/PawnB.png"
+}
+images {
+  image: "/main/images/PawnW.png"
+}
+images {
+  image: "/main/images/board/corner_left_bottom.png"
+}
+images {
+  image: "/main/images/board/corner_left_top.png"
+}
+images {
+  image: "/main/images/board/corner_right_bottom.png"
+}
+images {
+  image: "/main/images/board/corner_right_top.png"
+}
+margin: 2
+extrude_borders: 2
+inner_padding: 0

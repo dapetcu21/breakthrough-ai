@@ -1,0 +1,105 @@
+local GameState = require "game.game_state"
+local StateTransfer = require "main.state_transfer"
+local random_agent = require "game.random_agent"
+
+local h_set_game_state = hash("set_game_state")
+local h_ready_for_move = hash("ready_for_move")
+local h_apply_move = hash("apply_move")
+local h_set_turn_label = hash("set_turn_label")
+local h_set_paused = hash("set_paused")
+local h_init_scene = hash("init_scene")
+local h_reset_game = hash("reset_game")
+local h_set_agent = hash("set_agent")
+local h_set_board_size = hash("set_board_size")
+
+local function try_advancing_game(self)
+  if self.paused or self.board_animating then return end
+
+  local winner = GameState.get_winner(self.state)
+  if winner then
+    local label
+    if winner == 1 then
+      label = "White wins!"
+    elseif winner == 2 then
+      label = "Black wins!"
+    elseif winner == 0 then
+      label = "Draw"
+    end
+    msg.post(self.controls, h_set_turn_label, { label = label })
+
+    self.paused = true
+    msg.post(self.controls, h_set_paused, { value = true })
+
+    return
+  end
+
+  local label = self.state.current_player == 1 and "White's turn" or "Black's turn"
+  msg.post(self.controls, h_set_turn_label, { label = label })
+
+  local agent = self.agents[self.current_agents[self.state.current_player]]
+  local move = agent(self.state)
+  if not move then return end
+
+  self.state = GameState.apply_move(self.state, move)
+  msg.post(self.board_controller, h_apply_move, { move = move })
+  self.board_animating = true
+end
+
+local function reset_state(self, rows, columns)
+  if self.state then
+    rows = rows or self.state.rows
+    columns = columns or self.state.columns
+  end
+  rows = rows or 7
+  columns = columns or 7
+
+  self.state = GameState.new(rows, columns)
+  StateTransfer.state = self.state
+  msg.post(self.board_controller, h_set_game_state)
+  self.board_animating = false
+
+  msg.post(self.controls, h_set_turn_label, { label = "White's turn" })
+
+  try_advancing_game(self)
+end
+
+
+function init(self)
+  self.board_controller = msg.url("board/go#script")
+  self.controls = msg.url("#controls")
+  msg.post(self.board_controller, h_init_scene)
+  msg.post(self.controls, h_init_scene)
+
+  self.board_animating = false
+  self.paused = true
+  self.current_agents = { "random", "random" }
+  self.human_move = nil
+  self.agents = {
+    random = random_agent,
+    human = function (state)
+      local move = self.human_move
+      self.human_move = nil
+      return move
+    end
+  }
+
+  reset_state(self)
+end
+
+function on_message(self, message_id, message, sender)
+  if message_id == h_ready_for_move then
+    self.board_animating = false
+    try_advancing_game(self)
+  elseif message_id == h_set_paused then
+    self.paused = message.value
+    msg.post(self.controls, h_set_paused, { value = self.paused })
+    try_advancing_game(self)
+  elseif message_id == h_reset_game then
+    reset_state(self)
+  elseif message_id == h_set_agent then
+    self.current_agents[message.player] = message.agent
+    try_advancing_game(self)
+  elseif message_id == h_set_board_size then
+    reset_state(self, message.rows, message.columns)
+  end
+end

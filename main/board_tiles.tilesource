@@ -1,0 +1,9 @@
+image: "/main/images/board/tilemap.png"
+tile_width: 80
+tile_height: 80
+tile_margin: 0
+tile_spacing: 0
+collision: ""
+material_tag: "tile"
+extrude_borders: 0
+inner_padding: 0
