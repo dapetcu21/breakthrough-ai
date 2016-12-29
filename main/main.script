@@ -11,6 +11,7 @@ local h_init_scene = hash("init_scene")
 local h_reset_game = hash("reset_game")
 local h_set_agent = hash("set_agent")
 local h_set_board_size = hash("set_board_size")
+local h_toggle_cell = hash("toggle_cell")
 
 local function try_advancing_game(self)
   if self.paused or self.board_animating then return end
@@ -28,6 +29,7 @@ local function try_advancing_game(self)
     msg.post(self.controls, h_set_turn_label, { label = label })
 
     self.paused = true
+    msg.post(self.board, h_set_paused, { value = true })
     msg.post(self.controls, h_set_paused, { value = true })
 
     return
@@ -41,7 +43,7 @@ local function try_advancing_game(self)
   if not move then return end
 
   self.state = GameState.apply_move(self.state, move)
-  msg.post(self.board_controller, h_apply_move, { move = move })
+  msg.post(self.board, h_apply_move, { move = move })
   self.board_animating = true
 end
 
@@ -55,7 +57,7 @@ local function reset_state(self, rows, columns)
 
   self.state = GameState.new(rows, columns)
   StateTransfer.state = self.state
-  msg.post(self.board_controller, h_set_game_state)
+  msg.post(self.board, h_set_game_state)
   self.board_animating = false
 
   msg.post(self.controls, h_set_turn_label, { label = "White's turn" })
@@ -65,9 +67,9 @@ end
 
 
 function init(self)
-  self.board_controller = msg.url("board/go#script")
+  self.board = msg.url("board/go#script")
   self.controls = msg.url("#controls")
-  msg.post(self.board_controller, h_init_scene)
+  msg.post(self.board, h_init_scene)
   msg.post(self.controls, h_init_scene)
 
   self.board_animating = false
@@ -86,14 +88,37 @@ function init(self)
   reset_state(self)
 end
 
+local function toggle_cell(self, row, column)
+  local state = self.state
+  local piece_id = GameState.get_piece_at(state, row, column)
+
+  if not piece_id then
+    table.insert(state.pieces, { owner = 1, row = row, column = column })
+  else
+    local piece = state.pieces[piece_id]
+    if piece.owner == 1 then
+      piece.owner = 2
+    else
+      table.remove(state.pieces, piece_id)
+    end
+  end
+
+  StateTransfer.state = self.state
+  msg.post(self.board, h_set_game_state)
+  self.board_animating = false
+end
+
 function on_message(self, message_id, message, sender)
   if message_id == h_ready_for_move then
     self.board_animating = false
     try_advancing_game(self)
   elseif message_id == h_set_paused then
     self.paused = message.value
+    msg.post(self.board, h_set_paused, { value = self.paused })
     msg.post(self.controls, h_set_paused, { value = self.paused })
     try_advancing_game(self)
+  elseif message_id == h_toggle_cell then
+    toggle_cell(self, message.row, message.column)
   elseif message_id == h_reset_game then
     reset_state(self)
   elseif message_id == h_set_agent then
