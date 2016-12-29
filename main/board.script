@@ -4,6 +4,7 @@ local GameState = require "game.game_state"
 local tile_size = 80
 
 local h_layer1 = hash("layer1")
+local h_layer2 = hash("layer2")
 local h_touch = hash("touch")
 local h_set_game_state = hash("set_game_state")
 local h_ready_for_move = hash("ready_for_move")
@@ -25,6 +26,7 @@ local function setup_board(self, rows, columns)
   for y = 1, self.rows do
     for x = 1, self.columns do
       tilemap.set_tile(self.tilemap, h_layer1, x, y, 0)
+      tilemap.set_tile(self.tilemap, h_layer2, x, y, 0)
     end
   end
 
@@ -124,6 +126,18 @@ local function apply_move(self, move, sender)
   end
 end
 
+local function cancel_human_move(self)
+  if self.human_move then
+    self.human_move = false
+    self.human_move_piece = nil
+    for y = 1, self.rows do
+      for x = 1, self.columns do
+        tilemap.set_tile(self.tilemap, h_layer2, x, y, 0)
+      end
+    end
+  end
+end
+
 function on_input(self, action_id, action)
   if action_id == h_touch and action.released then
     local position = go.get_world_position(self.tilemap)
@@ -139,24 +153,36 @@ function on_input(self, action_id, action)
     elseif self.human_move then
       local state = self.state
       local piece_id = GameState.get_piece_at(state, row, column)
+
       if piece_id and state.pieces[piece_id].owner == state.current_player then
         self.human_move_piece = piece_id
+
+        for y = 1, self.rows do
+          for x = 1, self.columns do
+            tilemap.set_tile(self.tilemap, h_layer2, x, y, 0)
+          end
+        end
+
+        tilemap.set_tile(self.tilemap, h_layer2, column, row, 66)
+        local moves = GameState.get_moves(state)
+        for i, move in ipairs(moves) do
+          if move.piece_id == piece_id then
+            tilemap.set_tile(self.tilemap, h_layer2, move.column, move.row, 65)
+          end
+        end
+
       elseif self.human_move_piece then
         local moves = GameState.get_moves(state)
         for i, move in ipairs(moves) do
           if move.piece_id == self.human_move_piece and move.row == row and move.column == column then
-            self.human_move = false
             msg.post(self.controller, h_play_human_move, { move = move })
+            cancel_human_move(self)
             return
           end
         end
       end
     end
   end
-end
-
-local function cancel_human_move(self)
-  self.human_move = false
 end
 
 function on_message(self, message_id, message, sender)
