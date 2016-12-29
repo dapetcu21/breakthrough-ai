@@ -12,6 +12,8 @@ local h_reset_game = hash("reset_game")
 local h_set_agent = hash("set_agent")
 local h_set_board_size = hash("set_board_size")
 local h_toggle_cell = hash("toggle_cell")
+local h_request_human_move = hash("request_human_move")
+local h_play_human_move = hash("play_human_move")
 
 local function try_advancing_game(self)
   if self.paused or self.board_animating then return end
@@ -40,7 +42,11 @@ local function try_advancing_game(self)
 
   local agent = self.agents[self.current_agents[self.state.current_player]]
   local move = agent(self.state)
-  if not move then return end
+  if not move then
+    StateTransfer.state = self.state
+    msg.post(self.board, h_request_human_move)
+    return
+  end
 
   self.state = GameState.apply_move(self.state, move)
   msg.post(self.board, h_apply_move, { move = move })
@@ -111,6 +117,9 @@ end
 function on_message(self, message_id, message, sender)
   if message_id == h_ready_for_move then
     self.board_animating = false
+    try_advancing_game(self)
+  elseif message_id == h_play_human_move then
+    self.human_move = message.move
     try_advancing_game(self)
   elseif message_id == h_set_paused then
     self.paused = message.value

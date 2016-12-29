@@ -1,4 +1,5 @@
 local StateTransfer = require "main.state_transfer"
+local GameState = require "game.game_state"
 
 local tile_size = 80
 
@@ -13,6 +14,8 @@ local h_capture = hash("capture")
 local h_set_paused = hash("set_paused")
 local h_init_scene = hash("init_scene")
 local h_toggle_cell = hash("toggle_cell")
+local h_request_human_move = hash("request_human_move")
+local h_play_human_move = hash("play_human_move")
 
 local function setup_board(self, rows, columns)
   if self.rows == rows and self.column == columns then
@@ -75,6 +78,7 @@ function init(self)
   self.columns = 20
   self.pieces = {}
   self.paused = true
+  self.human_move = false
   setup_board(self, 7, 7)
 end
 
@@ -132,17 +136,43 @@ function on_input(self, action_id, action)
     end
     if self.paused then
       msg.post(self.controller, h_toggle_cell, { row = row, column = column })
+    elseif self.human_move then
+      local state = self.state
+      local piece_id = GameState.get_piece_at(state, row, column)
+      if piece_id and state.pieces[piece_id].owner == state.current_player then
+        self.human_move_piece = piece_id
+      elseif self.human_move_piece then
+        local moves = GameState.get_moves(state)
+        for i, move in ipairs(moves) do
+          if move.piece_id == self.human_move_piece and move.row == row and move.column == column then
+            self.human_move = false
+            msg.post(self.controller, h_play_human_move, { move = move })
+            return
+          end
+        end
+      end
     end
   end
 end
 
+local function cancel_human_move(self)
+  self.human_move = false
+end
+
 function on_message(self, message_id, message, sender)
-  if message_id == h_set_game_state then
+  if message_id == h_request_human_move then
+    self.state = StateTransfer.state
+    self.human_move = true
+    self.human_move_piece = nil
+  elseif message_id == h_set_game_state then
     set_game_state(self, StateTransfer.state)
+    cancel_human_move(self)
   elseif message_id == h_apply_move then
+    cancel_human_move(self)
     apply_move(self, message.move, sender)
   elseif message_id == h_set_paused then
     self.paused = message.value
+    cancel_human_move(self)
   elseif message_id == h_init_scene then
     self.controller = sender
     msg.post(".", "acquire_input_focus")
