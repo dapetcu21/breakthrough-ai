@@ -2110,8 +2110,8 @@ nodes {
   blend_mode: BLEND_MODE_ALPHA
   texture: "button/button_pressed"
   id: "columns/bg"
-  xanchor: XANCHOR_NONE
-  yanchor: YANCHOR_NONE
+  xanchor: XANCHOR_RIGHT
+  yanchor: YANCHOR_TOP
   pivot: PIVOT_W
   adjust_mode: ADJUST_MODE_FIT
   parent: "columns"
@@ -2128,6 +2128,8 @@ nodes {
   clipping_inverted: false
   alpha: 1.0
   overridden_fields: 4
+  overridden_fields: 12
+  overridden_fields: 13
   template_node_child: true
   size_mode: SIZE_MODE_MANUAL
 }
@@ -2458,8 +2460,8 @@ nodes {
   blend_mode: BLEND_MODE_ALPHA
   texture: "button/button_pressed"
   id: "rows/bg"
-  xanchor: XANCHOR_NONE
-  yanchor: YANCHOR_NONE
+  xanchor: XANCHOR_RIGHT
+  yanchor: YANCHOR_TOP
   pivot: PIVOT_W
   adjust_mode: ADJUST_MODE_FIT
   parent: "rows"
@@ -2477,6 +2479,8 @@ nodes {
   alpha: 1.0
   overridden_fields: 1
   overridden_fields: 4
+  overridden_fields: 12
+  overridden_fields: 13
   template_node_child: true
   size_mode: SIZE_MODE_MANUAL
 }
