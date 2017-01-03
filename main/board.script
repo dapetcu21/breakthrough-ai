@@ -1,5 +1,6 @@
 local StateTransfer = require "main.state_transfer"
 local GameState = require "game.game_state"
+local Window = require "render.window"
 
 local tile_size = 80
 
@@ -146,7 +147,9 @@ function on_input(self, action_id, action)
   if action_id == h_touch and action.released then
     local position = go.get_world_position(self.tilemap)
     local scale = 1.0 / (go.get_world_scale(self.tilemap) * tile_size)
-    local tile = (vmath.vector3(action.x, action.y, 0) - position)
+    local world_x = (action.screen_x - Window.width * 0.5) * (Window.design_height / Window.height)
+    local world_y = action.y - Window.design_height * 0.5
+    local tile = (vmath.vector3(world_x, world_y, 0) - position)
     local column = math.ceil(tile.x * scale)
     local row = math.ceil(tile.y * scale)
     if row < 1 or column < 1 or row > self.rows or column > self.columns then
