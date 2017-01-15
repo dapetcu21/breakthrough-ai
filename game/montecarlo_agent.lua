@@ -1,4 +1,5 @@
 local GameState = require "game.game_state"
+local random_agent = require "game.random_agent"
 
 local function shuffle(t)
   local n = #t
@@ -81,16 +82,16 @@ local function montecarlo_playout(node, move_budget, current_player)
   local state = node.state
 
   while moves_used < move_budget and not winner do
-    local next_moves = moves_used == 0 and node.moves or GameState.get_moves(state)
+    local next_move, moves_used_agent = random_agent(state, move_budget)
 
     -- No moves available means draw
-    if not next_moves[1] then
+    if not next_move then
       return 0.5, math.max(1, moves_used)
     end
 
-    state = GameState.apply_move(state, next_moves[math.random(#next_moves)])
+    state = GameState.apply_move(state, next_move)
     winner = GameState.get_winner(state)
-    moves_used = moves_used + 1
+    moves_used = moves_used + moves_used_agent
   end
 
   -- Playout interrupted by move budget
@@ -102,8 +103,8 @@ local function montecarlo_playout(node, move_budget, current_player)
   return score, math.max(1, moves_used)
 end
 
-local function montecarlo_agent(state)
-  local move_budget = 1000
+local function montecarlo_agent(state, move_budget)
+  local moves_used = 0
 
   local root = {
     state = state,
@@ -113,17 +114,20 @@ local function montecarlo_agent(state)
     playouts = 0
   }
 
-  while move_budget > 0 do
+  while move_budget > moves_used do
     local node = montecarlo_expand(montecarlo_select(root))
-    local score, moves_used = montecarlo_playout(node, move_budget, state.current_player)
-    move_budget = move_budget - moves_used
+    local score, moves_used_playout = montecarlo_playout(node, move_budget, state.current_player)
+
     -- We ignore the last playout if it was interrupted by the move budget
-    if move_budget >= 0 then
-      while node do
-        node.playouts = node.playouts + 1
-        node.score = node.score + score
-        node = node.parent
-      end
+    if move_budget - moves_used < moves_used_playout then
+      break
+    end
+
+    moves_used = moves_used + moves_used_playout
+    while node do
+      node.playouts = node.playouts + 1
+      node.score = node.score + score
+      node = node.parent
     end
   end
 
@@ -136,7 +140,7 @@ local function montecarlo_agent(state)
     end
   end
 
-  return best_move
+  return best_move, moves_used
 end
 
 return montecarlo_agent

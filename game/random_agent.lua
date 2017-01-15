@@ -4,7 +4,7 @@ math.randomseed(os.time())
 
 local function random_agent(state)
   local moves = GameState.get_moves(state)
-  return moves[math.random(#moves)]
+  return moves[math.random(#moves)], 1
 end
 
 return random_agent

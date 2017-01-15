@@ -121,4 +121,20 @@ function GameState.get_winner(state)
   return nil
 end
 
+function GameState.evaluate_state(state)
+  local rows = state.rows
+  local current_player = state.current_player
+  local total = 0
+  for i, piece in ipairs(state.pieces) do
+    local piece_adv = piece.owner == 1 and piece.row or rows - piece.row + 1
+    local score = piece_adv * piece_adv
+    if piece.owner == current_player then
+      total = total + score
+    else
+      total = total - score
+    end
+  end
+  return total
+end
+
 return GameState

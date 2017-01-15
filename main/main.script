@@ -17,6 +17,8 @@ local h_toggle_cell = hash("toggle_cell")
 local h_request_human_move = hash("request_human_move")
 local h_play_human_move = hash("play_human_move")
 
+local move_budget = 1000
+
 local function try_advancing_game(self)
   if self.paused or self.board_animating then return end
 
@@ -43,7 +45,7 @@ local function try_advancing_game(self)
   msg.post(self.controls, h_set_turn_label, { label = label })
 
   local agent = self.agents[self.current_agents[self.state.current_player]]
-  local move = agent(self.state)
+  local move = agent(self.state, move_budget)
   if not move then
     StateTransfer.state = self.state
     msg.post(self.board, h_request_human_move)
