@@ -5,10 +5,12 @@ math.randomseed(os.time())
 local function alphabeta(state, depth, alpha, beta, get_moves, apply_move)
   local winner = GameState.get_winner(state)
   if depth == 0 or winner then
-    if winner == state.current_player then
-      return math.huge
-    else
-      return -math.huge
+    if winner then
+      if winner == state.current_player then
+        return math.huge
+      else
+        return -math.huge
+      end
     end
     return GameState.evaluate_state(state)
   end
@@ -40,9 +42,6 @@ local function alphabeta(state, depth, alpha, beta, get_moves, apply_move)
   end
 
   return value, best_move
-end
-
-local function do_minimax(state, depth, get_moves, apply_move)
 end
 
 local function minimax_agent(root_state, move_budget)

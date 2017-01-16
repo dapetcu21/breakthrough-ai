@@ -6,6 +6,7 @@ local h_init_scene = hash("init_scene")
 local h_reset_game = hash("reset_game")
 local h_set_agent = hash("set_agent")
 local h_set_board_size = hash("set_board_size")
+local h_set_move_budget = hash("set_move_budget")
 
 function init(self)
   self.paused = true
@@ -13,8 +14,10 @@ function init(self)
   self.black_agent = "human"
   self.rows = 7
   self.columns = 7
+  self.budget = 1000
   self.rows_string = tostring(self.rows)
   self.columns_string = tostring(self.columns)
+  self.budget_string = tostring(self.budget)
 end
 
 function on_input(self, action_id, action)
@@ -57,6 +60,11 @@ function on_input(self, action_id, action)
     end
   end
 
+  self.budget_string = dirtylarry:input("budget", action_id, action, gui.KEYBOARD_TYPE_DEFAULT, self.budget_string)
+  local budget = tonumber(self.budget_string)
+  if budget and budget ~= self.budget then
+    msg.post(self.controller, h_set_move_budget, { value = budget })
+  end
 end
 
 function on_message(self, message_id, message, sender)
